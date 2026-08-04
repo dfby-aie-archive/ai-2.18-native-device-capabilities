@@ -32,19 +32,28 @@ In this lesson you will build **Explorer App**: a four-screen tabbed app with a 
 
 ---
 
-## Setup: Create the Project
+## Setup: Create the Project (10 min)
 
 Create a fresh Expo app and install all navigation dependencies at once:
 
 ```bash
+# Remember to select Expo SDK 54 when prompted
 npx create-expo-app --template blank explorer-app
-cd explorer-app
-npx expo lint
-npx expo install @react-navigation/native @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context @expo/vector-icons
-npm start
 ```
 
-Run the app on your emulator or device via Expo Go. Confirm the default screen loads.
+Open in VS Code:
+
+```bash
+cd explorer-app
+code .
+```
+
+Open the terminal and install eslint and navigation dependencies:
+
+```bash
+npx expo lint
+npx expo install @react-navigation/native @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context @react-native-vector-icons/ionicons
+```
 
 Create the following folder structure:
 
@@ -52,7 +61,7 @@ Create the following folder structure:
 explorer-app/
 ├── App.js
 ├── app.json
-├── context/
+├── contexts/
 ├── navigation/
 ├── screens/
 └── styles/
@@ -63,32 +72,42 @@ Create the shared style files first. All screens will import from them.
 `styles/colors.js`:
 
 ```js
+// styles/colors.js
 export const Colors = {
   PRIMARY: "#1971c2",
   PRIMARY_LIGHT_1: "#4dabf7",
   PRIMARY_LIGHT_2: "#e7f5ff",
+  WHITE: "#fff",
 };
 ```
 
 `styles/common.js`:
 
 ```js
+// styles/common.js
 import { StyleSheet } from "react-native";
+import { Colors } from "./colors";
 
 export const commonStyles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.WHITE,
   },
 });
+```
+
+Run the app on your emulator or device via Expo Go:
+
+```bash
+npx expo start
 ```
 
 **Device check:** the blank app loads on the emulator or device.
 
 ---
 
-## Part 1: Tab Navigation Shell
+## Part 1: Tab Navigation Shell (12 min)
 
 Before adding any native features, set up the navigation structure the rest of the lesson builds on. This reuses what you learned in Lesson 2.17.
 
@@ -99,6 +118,7 @@ Create four minimal screen files. Each just displays its name for now so you can
 `screens/HomeScreen.js`:
 
 ```jsx
+// screens/HomeScreen.js
 import { Text, View } from "react-native";
 import { commonStyles } from "../styles/common";
 
@@ -120,8 +140,9 @@ Create `screens/CameraScreen.js`, `screens/LocationScreen.js`, and `screens/Sett
 Create `navigation/TabNavigator.js`:
 
 ```jsx
+// navigation/TabNavigator.js
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons";
 import { Colors } from "../styles/colors";
 import HomeScreen from "../screens/HomeScreen";
 import CameraScreen from "../screens/CameraScreen";
@@ -135,7 +156,7 @@ function TabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: Colors.PRIMARY },
-        headerTintColor: "#fff",
+        headerTintColor: Colors.WHITE,
         tabBarActiveTintColor: Colors.PRIMARY,
       }}
     >
@@ -185,6 +206,7 @@ export default TabNavigator;
 Wire it up in `App.js`:
 
 ```jsx
+// App.js
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import TabNavigator from "./navigation/TabNavigator";
@@ -203,7 +225,7 @@ export default function App() {
 
 ---
 
-## Part 2: Home Screen with Gallery Picker (`expo-image-picker`)
+## Part 2: Home Screen with Gallery Picker (`expo-image-picker`) (12 min)
 
 The Home screen is the simplest native integration in the app: opening the device photo library and displaying a selected image. No camera is used here, and no permission needs to be requested before the picker opens: `launchImageLibraryAsync` triggers the system permission dialog automatically the first time it is called.
 
@@ -213,18 +235,17 @@ The Home screen is the simplest native integration in the app: opening the devic
 npx expo install expo-image-picker
 ```
 
-Open `app.json` and add the plugin with iOS permission strings. iOS requires these strings to be declared at build time; they are the exact text shown to the user in the system permission dialog.
+Open `app.json` and add the plugin with an iOS permission string. iOS requires this string to be declared at build time; it is the exact text shown to the user in the system permission dialog.
 
 ```json
+// app.json
 {
   "expo": {
     "plugins": [
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you share them.",
-          "cameraPermission": "The app accesses your camera to let you take photos.",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone"
+          "photosPermission": "The app accesses your photos to let you share them."
         }
       ]
     ]
@@ -232,19 +253,18 @@ Open `app.json` and add the plugin with iOS permission strings. iOS requires the
 }
 ```
 
-`$(PRODUCT_NAME)` is a placeholder that Expo replaces with the app name at build time.
+The `expo-image-picker` plugin accepts three permission keys: `photosPermission`, `cameraPermission`, and `microphonePermission`. Only declare the ones your app actually uses. `photosPermission` maps to `NSPhotoLibraryUsageDescription` on iOS and covers `launchImageLibraryAsync`, which is the only function this screen calls. `cameraPermission` and `microphonePermission` only matter if the app also calls `launchCameraAsync` to capture new photos or videos, which this screen does not do. Declaring permissions your app does not use is a common anti-pattern: it prompts users for access they never see a reason for, which increases the chance they deny the request. The Camera screen in Part 3 declares its own `cameraPermission` string separately, scoped to where it is actually used.
 
 ### Step 2: Build HomeScreen
 
 Replace the stub content of `screens/HomeScreen.js`:
 
 ```jsx
+// screens/HomeScreen.js
 import { useState } from "react";
-import { Button, Dimensions, Image, StyleSheet, Text, View } from "react-native";
+import { Button, Image, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { commonStyles } from "../styles/common";
-
-const windowWidth = Dimensions.get("window").width;
 
 function HomeScreen() {
   const [image, setImage] = useState(null);
@@ -252,7 +272,7 @@ function HomeScreen() {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images", "videos"],
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,
@@ -268,7 +288,9 @@ function HomeScreen() {
   return (
     <View style={commonStyles.container}>
       <Text>Welcome to the Explorer App</Text>
-      <Text style={{ marginBottom: 16 }}>Discover new places and experiences!</Text>
+      <Text style={{ marginBottom: 16 }}>
+        Discover new places and experiences!
+      </Text>
       <Button title="Pick an Image" onPress={pickImage} />
       {image && <Image source={{ uri: image }} style={styles.image} />}
     </View>
@@ -277,7 +299,7 @@ function HomeScreen() {
 
 const styles = StyleSheet.create({
   image: {
-    width: windowWidth - 40,
+    width: "100%",
     aspectRatio: 4 / 3,
     borderRadius: 8,
     marginTop: 16,
@@ -292,12 +314,13 @@ The `result` object from `launchImageLibraryAsync` has this shape:
 - `result.canceled`: `true` if the user closed the picker without selecting anything
 - `result.assets`: an array of selected items; `result.assets[0].uri` is the local file path of the chosen image
 - `allowsEditing: true` and `aspect` activate the built-in crop UI before the image is returned
+- `mediaTypes: ["images"]` restricts the picker to photos only. The screen renders the result with `<Image>`, which cannot play video; if `"videos"` were included, a user selecting a video would produce a broken image instead of a preview.
 
 **Device check:** tapping "Pick an Image" opens the system photo picker. Selecting a photo displays it below the button. On the emulator, use the photos already in the emulator's library.
 
 ---
 
-## Part 3: Camera Screen with Live Preview, Photo Capture, and QR Scanning
+## Part 3: Camera Screen with Live Preview, Photo Capture, and QR Scanning (35 min)
 
 The Camera screen builds three features in sequence: a live viewfinder with permission handling, a button to capture and save a photo, and QR/barcode scanning that navigates to a result screen.
 
@@ -307,26 +330,27 @@ The Camera screen builds three features in sequence: a live viewfinder with perm
 npx expo install expo-camera expo-media-library
 ```
 
+> **Restart the dev server after installing.** Packages like `expo-camera` and `expo-media-library` include native code, not just JavaScript. A Fast Refresh is not enough for Expo Go to pick up newly registered native modules: stop `npx expo start` and run it again. If the camera still fails to load afterward, fully close and reopen the app in Expo Go rather than only reloading it.
+
 Add the camera plugin to `app.json` alongside the existing image picker entry:
 
 ```json
+// app.json
 {
   "expo": {
     "plugins": [
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you share them.",
-          "cameraPermission": "The app accesses your camera to let you take photos.",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone"
+          "photosPermission": "The app accesses your photos to let you share them."
         }
       ],
       [
         "expo-camera",
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
-          "recordAudioAndroid": true
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ]
     ]
@@ -334,15 +358,18 @@ Add the camera plugin to `app.json` alongside the existing image picker entry:
 }
 ```
 
+This screen only takes still photos with `takePictureAsync` and scans barcodes; it never records video. `microphonePermission` is explicitly set to `false` rather than omitted, because the `expo-camera` plugin adds a microphone usage string by default even if the key is left out. Setting it to `false` suppresses `NSMicrophoneUsageDescription` on iOS. `recordAudioAndroid: false` does the same for the `RECORD_AUDIO` permission on Android. Requesting microphone access the app never uses would be confusing to users and, in a production app, would need to be justified to app store reviewers.
+
 ### Step 2: Handle permissions and show the live viewfinder
 
 Replace the stub content of `screens/CameraScreen.js`:
 
 ```jsx
+// screens/CameraScreen.js
 import { useRef, useState } from "react";
 import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons";
 import { commonStyles } from "../styles/common";
 import { Colors } from "../styles/colors";
 
@@ -376,7 +403,7 @@ function CameraScreen() {
       <View style={styles.buttonsContainer}>
         <TouchableOpacity onPress={toggleCameraFacing} style={styles.button}>
           <Text style={styles.buttonText}>Flip Camera</Text>
-          <Ionicons name="camera-reverse" size={36} color="white" />
+          <Ionicons name="camera-reverse" size={36} color={Colors.WHITE} />
         </TouchableOpacity>
       </View>
     </View>
@@ -412,13 +439,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#1971c280",
+    backgroundColor: `${Colors.PRIMARY}80`,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   buttonText: {
-    color: "#fff",
+    color: Colors.WHITE,
     fontSize: 12,
     textTransform: "uppercase",
     fontWeight: "bold",
@@ -427,6 +454,8 @@ const styles = StyleSheet.create({
 
 export default CameraScreen;
 ```
+
+`` `${Colors.PRIMARY}80` `` appends `80` to the end of the hex colour, an alpha channel that makes the button background semi-transparent so the live camera feed stays partially visible behind it.
 
 `useCameraPermissions` returns a `[permission, requestPermission]` pair. The two guard clauses at the top handle the two states before the camera can be shown:
 
@@ -444,45 +473,47 @@ The camera permission and the media library permission are separate. A user can 
 Add the `takePhoto` function to `CameraScreen`, just above the `return`:
 
 ```jsx
+// screens/CameraScreen.js
 import * as MediaLibrary from "expo-media-library";
-import { Alert, Platform } from "react-native";
+import { Alert } from "react-native";
 
-  const takePhoto = async () => {
-    if (!cameraRef.current) return;
-    try {
-      if (Platform.OS === "ios") {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert(
-            "Permission Required",
-            "Media Library permission is required to save photos."
-          );
-          return;
-        }
-      }
-      const photo = await cameraRef.current.takePictureAsync();
-      await MediaLibrary.createAssetAsync(photo.uri);
-      Alert.alert("Photo Taken", "Photo saved to media library.");
-    } catch (error) {
-      console.log("Error taking photo:", error);
+const takePhoto = async () => {
+  if (!cameraRef.current) return;
+  try {
+    const { status } = await MediaLibrary.requestPermissionsAsync(true);
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Required",
+        "Media Library permission is required to save photos.",
+      );
+      return;
     }
-  };
+    const photo = await cameraRef.current.takePictureAsync();
+    await MediaLibrary.createAssetAsync(photo.uri);
+    Alert.alert("Photo Taken", "Photo saved to media library.");
+  } catch (error) {
+    console.log("Error taking photo:", error);
+  }
+};
 ```
 
-On iOS, media library permission is requested inside `takePhoto` rather than on screen mount. This way the user is not hit with two permission dialogs back to back when they first open the camera screen. On Android, `MediaLibrary` handles permissions at the OS level without needing an explicit request here.
+Media library permission is requested inside `takePhoto` rather than on screen mount, on both iOS and Android. This way the user is not hit with two permission dialogs back to back when they first open the camera screen, and only sees the media library prompt once they actually try to save a photo.
+
+`requestPermissionsAsync(true)` passes `writeOnly: true`. Saving a photo the camera just captured only needs permission to add a new asset, not to read the rest of the user's existing photo library, so requesting write-only access is both more precise and less alarming to the user than asking for full read/write access. On Android 13 and later, this maps to the narrower permission Android grants for an app's own media writes, rather than the broader `READ_MEDIA_IMAGES` permission.
 
 Add a "Take Photo" button alongside the flip button inside `buttonsContainer`:
 
 ```jsx
-        <TouchableOpacity onPress={takePhoto} style={styles.button}>
-          <Text style={styles.buttonText}>Take Photo</Text>
-          <Ionicons name="camera" size={36} color="white" />
-        </TouchableOpacity>
+// screens/CameraScreen.js
+<TouchableOpacity onPress={takePhoto} style={styles.button}>
+  <Text style={styles.buttonText}>Take Photo</Text>
+  <Ionicons name="camera" size={36} color={Colors.WHITE} />
+</TouchableOpacity>
 ```
 
 **Device check:** tapping "Take Photo" saves a photo and shows the confirmation alert. Open the device photo library to verify the photo is there.
 
-> **Common mistake:** calling `MediaLibrary.createAssetAsync` before requesting the media library permission on iOS. The call will silently fail or throw. Always check the permission first, even if the camera permission has already been granted; they are independent.
+> **Common mistake:** calling `MediaLibrary.createAssetAsync` before requesting the media library permission. The call will silently fail or throw on both platforms. Always check the permission first, even if the camera permission has already been granted; they are independent, and on Android 13 and later the media library permission is no longer granted automatically.
 
 ### Step 4: Add QR and barcode scanning
 
@@ -493,6 +524,7 @@ The scanned result should open a new screen. `BarcodeResultScreen` should not be
 Create `screens/BarcodeResultScreen.js`:
 
 ```jsx
+// screens/BarcodeResultScreen.js
 import { Button, StyleSheet, Text, View } from "react-native";
 import { commonStyles } from "../styles/common";
 
@@ -516,9 +548,16 @@ const styles = StyleSheet.create({
 export default BarcodeResultScreen;
 ```
 
+`BarcodeResultScreen` needs a stack navigator, which was not installed in the setup step. Install `@react-navigation/native-stack`, the same package used for stack navigation in Lesson 2.17:
+
+```bash
+npx expo install @react-navigation/native-stack
+```
+
 Create `navigation/AppStackNavigator.js`. This wraps `TabNavigator` as its first screen (with `headerShown: false` so only one header is visible at a time) and registers `BarcodeResultScreen` as a second screen reachable from anywhere inside the tabs:
 
 ```jsx
+// navigation/AppStackNavigator.js
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Colors } from "../styles/colors";
 import TabNavigator from "./TabNavigator";
@@ -531,7 +570,8 @@ function AppStackNavigator() {
     <Stack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: Colors.PRIMARY },
-        headerTintColor: "#fff",
+        headerTintColor: Colors.WHITE,
+        headerBackButtonDisplayMode: "minimal",
       }}
     >
       <Stack.Screen
@@ -551,9 +591,12 @@ function AppStackNavigator() {
 export default AppStackNavigator;
 ```
 
+By default, the back button on `BarcodeResultScreen`'s header would show the label of the previous screen on the stack, which is the `Stack.Screen` named `"Tabs"`, not "Camera." `headerBackButtonDisplayMode: "minimal"` removes the label entirely on iOS, leaving just the back arrow, which avoids the misleading text. If a specific label is preferred instead, set `headerBackTitle: "Camera"` in `BarcodeResultScreen`'s own `options` to override it directly.
+
 Update `App.js` to use `AppStackNavigator` instead of `TabNavigator`:
 
 ```jsx
+// App.js
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import AppStackNavigator from "./navigation/AppStackNavigator";
@@ -571,39 +614,40 @@ export default function App() {
 Now wire up the barcode handler in `CameraScreen`. Because `CameraScreen` is a registered tab screen, the `navigation` prop is automatically provided; add it to the function signature:
 
 ```jsx
+// screens/CameraScreen.js
 function CameraScreen({ navigation }) {
 ```
 
 Add the handler and pass it to `CameraView`:
 
 ```jsx
-  const handleBarcodeScanned = ({ type, data }) => {
-    navigation.navigate("BarcodeResult", { barcodeData: data });
-  };
+// screens/CameraScreen.js
+const handleBarcodeScanned = ({ type, data }) => {
+  navigation.navigate("BarcodeResult", { barcodeData: data });
+};
 ```
 
 Update `CameraView` in the `return`:
 
 ```jsx
-      <CameraView
-        facing={facing}
-        style={styles.camera}
-        ref={cameraRef}
-        onBarcodeScanned={handleBarcodeScanned}
-      />
+// screens/CameraScreen.js
+<CameraView
+  facing={facing}
+  style={styles.camera}
+  ref={cameraRef}
+  onBarcodeScanned={handleBarcodeScanned}
+/>
 ```
 
 **Device check:** point the camera at a QR code. The app navigates to `BarcodeResultScreen` showing the decoded data. Tapping "Go Back" returns to the Camera tab.
 
-> **Instructor note on emulators:** On the Android emulator, use the Extended Controls camera panel to display a QR code in the simulated scene, or mirror a physical device using scrcpy. On the iOS Simulator, use a physical device with Expo Go.
-
 ---
 
-## Activity 1: Fix the Repeated Scan Problem
+## Activity 1: Fix the Repeated Scan Problem (10 min)
 
-The `onBarcodeScanned` handler fires on every camera frame once a barcode is detected. This means `navigation.navigate` is called many times in rapid succession, which can push multiple copies of `BarcodeResultScreen` onto the stack.
+`BarcodeResultScreen` is pushed onto the same stack as `CameraScreen`, so `CameraScreen` stays mounted underneath it rather than unmounting. Its `CameraView` keeps running and keeps calling `onBarcodeScanned` on every frame, even while `BarcodeResultScreen` is the screen the user actually sees. This wastes processing and battery for no benefit, since the app has already navigated away with the decoded data it needed.
 
-Your task: make `CameraScreen` navigate only once per scan. After the first scan triggers navigation, the scanner should pause until the user returns to the Camera tab.
+Your task: make `CameraScreen` stop scanning as soon as a code is detected, so it is not scanning in the background while `BarcodeResultScreen` is showing. Scanning should resume once the user returns to the Camera tab; if the same code is still in frame at that point, scanning it again and navigating again is expected behaviour, not a bug.
 
 **Hints:**
 
@@ -616,6 +660,7 @@ Your task: make `CameraScreen` navigate only once per scan. After the first scan
 <summary>Reference solution</summary>
 
 ```jsx
+// screens/CameraScreen.js
 import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -628,7 +673,7 @@ function CameraScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       setIsScanned(false);
-    }, [])
+    }, []),
   );
 
   // ... permission guards ...
@@ -656,7 +701,7 @@ function CameraScreen({ navigation }) {
 
 ---
 
-## Part 4: Location Screen with `expo-location` and `react-native-maps`
+## Part 4: Location Screen with `expo-location` and `react-native-maps` (15 min)
 
 ### Step 1: Install dependencies
 
@@ -667,12 +712,13 @@ npx expo install expo-location react-native-maps
 Add the `expo-location` plugin to `app.json`:
 
 ```json
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow the app to use your location."
-        }
-      ]
+// app.json
+[
+  "expo-location",
+  {
+    "locationAlwaysAndWhenInUsePermission": "Allow the app to use your location."
+  }
+]
 ```
 
 ### Step 2: Build LocationScreen
@@ -682,6 +728,7 @@ Unlike the camera, the location permission is requested inside the `getLocation`
 Replace the stub content of `screens/LocationScreen.js`:
 
 ```jsx
+// screens/LocationScreen.js
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -763,21 +810,22 @@ const styles = StyleSheet.create({
 export default LocationScreen;
 ```
 
-Three things to note:
+Two things to note:
 
 - `requestForegroundPermissionsAsync` requests permission to access location while the app is in the foreground. There is also a `requestBackgroundPermissionsAsync` for apps that need location when minimised, but that is not needed here.
-- `finally` is the right place to reset `retrievingLocation` to `false`. It runs whether the `try` block succeeded or `catch` handled an error, so the spinner is always cleared.
 - `location?.coords &&` uses optional chaining to guard against rendering `MapView` before location has been set. Without the guard, accessing `location.coords` when `location` is `null` would throw.
 
 **Device check:** tapping "Get Location" shows the permission dialog. After granting, coordinates appear and a map renders centred on the current position with a "You are here" marker.
 
-On the Android emulator, set a simulated location via Extended Controls > Location. On iOS Simulator, use Features > Location > Custom Location.
+Emulators and simulators do not have real GPS hardware, so they report a default simulated location instead of where the computer actually is. The Android emulator defaults to Google's headquarters in Mountain View, California. The iOS Simulator defaults to Apple's flagship retail store in Union Square, San Francisco. Do not be surprised if the marker does not appear anywhere near you: this is expected. To change it, set a simulated location via Extended Controls > Location on the Android emulator, or Features > Location > Custom Location on the iOS Simulator.
 
 ---
 
-## Part 5: Authenticated Navigation Shell
+## Part 5: Authenticated Navigation Shell (25 min)
 
 This section adds a login flow to the app. `AuthContext` holds authentication state using the Context API from Lesson 2.6, and `App.js` renders either the auth screens or the main app depending on whether the user is logged in.
+
+> **Scope of this section.** `AuthContext` in this lesson is a demonstration of how to call `expo-local-authentication` and structure a navigator around an authentication state, not a template for production authentication. `login` accepts any input without verifying it against a server, and `biometricLogin` only confirms that the device owner passed a local biometric check, it does not issue or refresh any server-side session. A real app needs a backend that verifies credentials, issues short-lived tokens with a refresh mechanism, and stores those tokens in `expo-secure-store` rather than `AsyncStorage`. Mobile authentication and session security are their own subject, governed by guidelines such as the [OWASP Mobile Application Security](https://owasp.org/www-project-mobile-app-security/) project, and are out of scope for this lesson. The goal here is to see the native APIs work, not to build a secure login system.
 
 ### Step 1: Install `expo-local-authentication`
 
@@ -787,11 +835,26 @@ npx expo install expo-local-authentication
 
 This library provides access to Face ID, fingerprint, and device PIN for biometric authentication.
 
+Add the `expo-local-authentication` plugin to `app.json`:
+
+```json
+// app.json
+[
+  "expo-local-authentication",
+  {
+    "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID."
+  }
+]
+```
+
+`faceIDPermission` maps to `NSFaceIDUsageDescription` on iOS. Without it, `authenticateAsync` does not use Face ID on a Face ID device: it either fails outright or falls back to the device passcode, and an app built without this string can be rejected during App Store review. Android needs no equivalent entry; the plugin adds the required permissions to the manifest automatically.
+
 ### Step 2: Create `AuthContext`
 
-Create `context/AuthContext.js`. This is the single source of truth for authentication state. It exposes three functions: `login`, `logout`, and `biometricLogin`.
+Create `contexts/AuthContext.js`. This is the single source of truth for authentication state. It exposes three functions: `login`, `logout`, and `biometricLogin`.
 
 ```jsx
+// contexts/AuthContext.js
 import { createContext, useState } from "react";
 import * as LocalAuthentication from "expo-local-authentication";
 
@@ -825,7 +888,9 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, biometricLogin }}>
+    <AuthContext.Provider
+      value={{ isAuthenticated, login, logout, biometricLogin }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -846,10 +911,11 @@ Both must be true before calling `authenticateAsync`, which triggers the system 
 Create `screens/LoginScreen.js`:
 
 ```jsx
+// screens/LoginScreen.js
 import { useContext, useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import AuthContext from "../context/AuthContext";
+import Ionicons from "@react-native-vector-icons/ionicons";
+import AuthContext from "../contexts/AuthContext";
 import { Colors } from "../styles/colors";
 
 function LoginScreen({ navigation }) {
@@ -921,6 +987,7 @@ export default LoginScreen;
 Create `screens/RegisterScreen.js`. This is a mock; in a real app it would call a registration API, but for now it just shows an alert:
 
 ```jsx
+// screens/RegisterScreen.js
 import { useState } from "react";
 import { Alert, Button, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -931,7 +998,7 @@ function RegisterScreen({ navigation }) {
   const handleRegister = () => {
     Alert.alert(
       "Mock Registration",
-      "This is just a mock registration function."
+      "This is just a mock registration function.",
     );
   };
 
@@ -989,9 +1056,10 @@ export default RegisterScreen;
 Update `screens/SettingsScreen.js` to show a logout button:
 
 ```jsx
+// screens/SettingsScreen.js
 import { useContext } from "react";
 import { Button, View } from "react-native";
-import AuthContext from "../context/AuthContext";
+import AuthContext from "../contexts/AuthContext";
 import { commonStyles } from "../styles/common";
 
 function SettingsScreen() {
@@ -1012,6 +1080,7 @@ export default SettingsScreen;
 Create `navigation/AuthStackNavigator.js`. This wraps the two auth screens in a stack navigator with no header; the Login and Register screens manage their own layout:
 
 ```jsx
+// navigation/AuthStackNavigator.js
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
@@ -1035,10 +1104,11 @@ export default AuthStackNavigator;
 Update `App.js` to wrap everything in `AuthProvider` and conditionally render either the auth flow or the main app based on `isAuthenticated`:
 
 ```jsx
+// App.js
 import { useContext } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
-import AuthContext, { AuthProvider } from "./context/AuthContext";
+import AuthContext, { AuthProvider } from "./contexts/AuthContext";
 import AppStackNavigator from "./navigation/AppStackNavigator";
 import AuthStackNavigator from "./navigation/AuthStackNavigator";
 
@@ -1070,9 +1140,11 @@ By splitting `NavigationApp` out as a child of `<AuthProvider>`, it sits inside 
 
 ---
 
-## Part 6: Persisting Login State with `AsyncStorage`
+## Part 6: Persisting Login State with `AsyncStorage` (12 min)
 
 Right now, every time the app restarts, the user must log in again. `AsyncStorage` is a simple key-value store that persists data to disk across app launches. You will use it to save a login flag so returning users go straight to the app.
+
+Unlike the other libraries in this lesson, `AsyncStorage` is not an Expo SDK package: its real name is `@react-native-async-storage/async-storage`, a community-maintained React Native package that predates Expo. `npx expo install` is still the right way to add it, since Expo pins a version compatible with the current SDK even for third-party packages, but it is not part of the `expo-*` family like `expo-camera` or `expo-location`.
 
 ### Step 1: Install `AsyncStorage`
 
@@ -1082,17 +1154,16 @@ npx expo install @react-native-async-storage/async-storage
 
 ### Step 2: Save and clear the flag in `AuthContext`
 
-Three changes are needed in `context/AuthContext.js`:
+Three changes are needed in `contexts/AuthContext.js`:
 
 1. Save a flag when the user logs in
 2. Clear the flag on logout
 3. Read the flag on mount and restore the session if it exists
 
-An `isLoading` state prevents the Login screen from flashing briefly on startup while the stored value is being read. Add it to the context value so `App.js` can use it.
-
-Replace the contents of `context/AuthContext.js`:
+Replace the contents of `contexts/AuthContext.js`:
 
 ```jsx
+// contexts/AuthContext.js
 import { createContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -1103,19 +1174,12 @@ const AUTH_KEY = "isLoggedIn";
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const restoreSession = async () => {
-      try {
-        const value = await AsyncStorage.getItem(AUTH_KEY);
-        if (value === "true") {
-          setIsAuthenticated(true);
-        }
-      } catch (error) {
-        console.log("Error restoring session:", error);
-      } finally {
-        setIsLoading(false);
+      const value = await AsyncStorage.getItem(AUTH_KEY);
+      if (value === "true") {
+        setIsAuthenticated(true);
       }
     };
     restoreSession();
@@ -1149,9 +1213,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{ isAuthenticated, isLoading, login, logout, biometricLogin }}
-    >
+    <AuthContext.Provider value={{ isAuthenticated, login, logout, biometricLogin }}>
       {children}
     </AuthContext.Provider>
   );
@@ -1164,42 +1226,15 @@ export default AuthContext;
 
 `login`, `logout`, and `biometricLogin` are now `async` because `AsyncStorage` operations return promises. The `await` before each `setItem` / `removeItem` ensures the write completes before the state update, so the two stay in sync.
 
-`isLoading` starts as `true` and is set to `false` inside the `finally` block of `restoreSession`. Using `finally` is important: it runs whether `getItem` succeeded or threw an error, so `isLoading` is always eventually cleared.
-
-### Step 3: Show a loading screen while restoring the session
-
-Without a loading state, the Login screen flashes briefly on every launch for already-authenticated users, because React renders before `restoreSession` finishes. Read `isLoading` from `AuthContext` in `NavigationApp` and render an `ActivityIndicator` while the check is in progress:
-
-```jsx
-import { ActivityIndicator, View } from "react-native";
-
-function NavigationApp() {
-  const { isAuthenticated, isLoading } = useContext(AuthContext);
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  return (
-    <NavigationContainer>
-      {isAuthenticated ? <AppStackNavigator /> : <AuthStackNavigator />}
-      <StatusBar style="auto" />
-    </NavigationContainer>
-  );
-}
-```
-
 **Device check:** log in, then close and reopen the app. The app should open directly to the tab navigator without the Login screen appearing. Tap Logout on the Settings screen, close the app, and reopen it; the Login screen should appear again.
 
-> **Production note:** This lesson stores a simple boolean flag. In a real app, your login API returns a JWT (JSON Web Token). Store the token with `AsyncStorage.setItem(AUTH_KEY, token)` and send it in the `Authorization` header of subsequent API requests. For higher security, especially for sensitive data like tokens that should survive device backups being compromised, use `expo-secure-store` instead of `AsyncStorage`. It stores data in the device's secure enclave (Keychain on iOS, Keystore on Android).
+> **Production note:** This lesson stores a simple boolean flag, which is all `AsyncStorage` should ever be trusted with here. In a real app, your login API returns a JWT (JSON Web Token) instead of a flag, and a JWT must never go into `AsyncStorage`: it stores data in plaintext, readable by anything with access to the device's filesystem or an unencrypted backup. A real token belongs in `expo-secure-store`, which stores data in the device's secure enclave (Keychain on iOS, Keystore on Android): `SecureStore.setItemAsync(AUTH_KEY, token)`. Send the retrieved token in the `Authorization` header of subsequent API requests.
 
 ---
 
-## Activity 2: Conditionally Show the Biometric Login Button
+## Activity 2 (Optional, 10 min): Conditionally Show the Biometric Login Button
+
+This activity is optional; skip it if you are short on time.
 
 The fingerprint icon in `LoginScreen` is always visible, even on emulators or devices where biometrics are not available. On a device with no biometric hardware, tapping it does nothing, which is confusing for users.
 
@@ -1216,6 +1251,7 @@ Your task: check whether biometric login is actually available and only show the
 <summary>Reference solution</summary>
 
 ```jsx
+// screens/LoginScreen.js
 import { useContext, useEffect, useState } from "react";
 import * as LocalAuthentication from "expo-local-authentication";
 
@@ -1266,11 +1302,15 @@ The `login` function currently accepts any input, including empty strings. Add v
 
 In `CameraScreen`, add a button that cycles through flash modes: `"off"` → `"on"` → `"auto"` → back to `"off"`. Pass the current mode to the `flash` prop on `CameraView`. Display the current mode using an appropriate `Ionicons` icon (`"flash-off"`, `"flash"`, `"flash-outline"`).
 
-### Challenge 3: Image preview before saving
+### Challenge 3: Manual barcode scan toggle
+
+Add a state variable `barcodeScanEnabled` (boolean, starts `true`) and a button that toggles it, showing a different `Ionicons` icon depending on its value (for example `"qr-code"` when enabled, `"qr-code-outline"` when disabled). Only pass `handleBarcodeScanned` to `onBarcodeScanned` when both `barcodeScanEnabled` is `true` and `isScanned` is `false`; pass `undefined` otherwise. This lets the user pause scanning on demand, for example to point the camera at a QR code without being navigated away from it.
+
+### Challenge 4: Image preview before saving
 
 After `takePictureAsync`, store the photo URI in state and display a preview overlay on top of `CameraView`. Add "Save" and "Discard" buttons on the overlay. Only call `MediaLibrary.createAssetAsync` when the user taps "Save"; "Discard" clears the preview and returns to the live viewfinder.
 
-### Challenge 4: Live location tracking
+### Challenge 5: Live location tracking
 
 Instead of fetching location once with `getCurrentPositionAsync`, use `Location.watchPositionAsync` to subscribe to continuous updates. Update the map region and marker each time a new position is received. When the component unmounts, call `.remove()` on the subscription object returned by `watchPositionAsync` to stop tracking.
 
@@ -1283,7 +1323,7 @@ Instead of fetching location once with `getCurrentPositionAsync`, use `Location.
 - Nesting a `TabNavigator` inside a `StackNavigator` is the standard pattern for screens that should be reachable from any tab but should not appear in the tab bar itself.
 - Conditional navigator rendering based on `AuthContext` is the idiomatic React Navigation pattern for auth flows: render the auth stack or the app stack, not individual hidden screens.
 - `expo-local-authentication` wraps Face ID, fingerprint, and device PIN behind a single `authenticateAsync` call. Always check `hasHardwareAsync` and `isEnrolledAsync` before attempting authentication.
-- `AsyncStorage` persists key-value data to disk across app launches. Use `isLoading` state to prevent a flash of the Login screen while a stored session is being restored on startup. For sensitive data in production, use `expo-secure-store` instead.
+- `AsyncStorage` persists key-value data to disk across app launches. Reading it on mount inside a `useEffect` restores the session before the user sees the Login screen again. For sensitive data in production, use `expo-secure-store` instead.
 
 ---
 

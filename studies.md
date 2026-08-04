@@ -80,7 +80,7 @@ Timebox **2–3 hours** across these resources before the lesson. You do not nee
 
 **Read (15 min)**
 
-- [AsyncStorage: Getting Started](https://react-native-async-storage.github.io/async-storage/docs/start): Read the "Installation" section and the `getItem`, `setItem`, and `removeItem` function references.
+- [AsyncStorage: GitHub README](https://github.com/react-native-async-storage/async-storage#readme): Read the "Getting started" section and the `getItem`, `setItem`, and `removeItem` function references.
 
 **Key ideas to take away:**
 

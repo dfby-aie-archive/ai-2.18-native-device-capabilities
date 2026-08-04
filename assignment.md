@@ -37,7 +37,7 @@ Build a **Field Notes** app that lets users record observations in the field. Ea
 - [ ] Create a new Expo project: `npx create-expo-app --template blank FieldNotesApp`
 - [ ] Install navigation dependencies:
   ```bash
-  npx expo install @react-navigation/native @react-navigation/bottom-tabs @react-navigation/native-stack react-native-screens react-native-safe-area-context @expo/vector-icons
+  npx expo install @react-navigation/native @react-navigation/bottom-tabs @react-navigation/native-stack react-native-screens react-native-safe-area-context @react-native-vector-icons/ionicons
   ```
 - [ ] Install native feature dependencies:
   ```bash
@@ -48,8 +48,8 @@ Build a **Field Notes** app that lets users record observations in the field. Ea
 
 #### 2. Authentication
 
-- [ ] `AuthContext` manages `isAuthenticated` and `isLoading` state
-- [ ] On startup, `AsyncStorage.getItem` restores the session; `isLoading` prevents the Login screen from flashing for already-logged-in users
+- [ ] `AuthContext` manages `isAuthenticated` state
+- [ ] On startup, `AsyncStorage.getItem` restores the session
 - [ ] `login(username, password)` validates that neither field is empty, then writes to `AsyncStorage` and sets `isAuthenticated` to `true`
 - [ ] `logout` removes the key from `AsyncStorage` and sets `isAuthenticated` to `false`
 - [ ] The navigator tree renders either the auth stack or the app tab navigator based on `isAuthenticated`
@@ -66,7 +66,7 @@ NavigationContainer
     Tab.Screen: "Settings" → SettingsScreen
 ```
 
-- [ ] All tabs must have icons from `@expo/vector-icons`
+- [ ] All tabs must have icons from `@react-native-vector-icons/ionicons`
 - [ ] Apply a consistent brand colour to the tab bar and header using `screenOptions`
 
 #### 4. Add Note Screen
@@ -112,6 +112,7 @@ Use `JSON.stringify` when writing and `JSON.parse` when reading. Append new note
 
 - [ ] Show a loading spinner while the GPS coordinates are being fetched after a photo is captured
 - [ ] Format the timestamp on each note card as a human-readable date string using `new Date(timestamp).toLocaleString()`
+- [ ] Add an `isLoading` state to `AuthContext` so the Login screen does not flash briefly on startup while the session is being restored from `AsyncStorage`
 
 ### Medium
 

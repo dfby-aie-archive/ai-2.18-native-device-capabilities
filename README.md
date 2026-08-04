@@ -8,27 +8,31 @@ This lesson teaches learners how to access native device hardware and OS feature
 
 - [Self Studies](./studies.md)
 - [Lesson](./lesson.md)
-- [Assessment](./assessment.md)
 - [Assignment](./assignment.md)
 
 ## Lesson Objectives
 
 - Configure iOS and Android permissions for native device features using Expo's `app.json` plugin system
-- Integrate `expo-camera`, `expo-media-library`, and `expo-image-picker` to capture photos, save them to the device library, and scan QR codes
+- Integrate `expo-camera` and `expo-media-library` to build a camera screen with live preview, photo capture, and QR code scanning
+- Use `expo-image-picker` to let users select media from the device library
 - Implement location-based features using `expo-location` and display coordinates on an interactive map with `react-native-maps`
 - Build an authenticated navigation shell with `AuthContext`, conditional navigator rendering, and biometric login via `expo-local-authentication`
-- Persist login state across app restarts using `AsyncStorage`, with an `isLoading` guard to prevent the Login screen from flashing on startup
+- Persist login state across app restarts using `AsyncStorage`
 
 ## Lesson Plan
 
 | Duration | What | How or Why |
 |---|---|---|
-| 10 min | Welcome and recap | Briefly revisit Lesson 2.17: React Navigation, nested navigators, `useFocusEffect`; introduce Explorer App and what learners will build |
-| 15 min | Setup and tab shell | Code-along: create Expo project, install nav dependencies, create stub screens and shared styles, build `TabNavigator` and wire into `App.js` |
-| 20 min | Part 2: Image Picker | Code-along: install `expo-image-picker`, configure `app.json`, build `HomeScreen` with `launchImageLibraryAsync`, display selected image |
-| 35 min | Part 3: Camera and QR scanning | Code-along: install `expo-camera` and `expo-media-library`, configure permissions, build `CameraScreen` with live preview, flip, `takePhoto`, and `onBarcodeScanned`; create `BarcodeResultScreen` and `AppStackNavigator`; Activity 1: fix repeated scan problem with `isScanned` and `useFocusEffect` |
-| 20 min | Part 4: Location and map | Code-along: install `expo-location` and `react-native-maps`, configure `app.json`, build `LocationScreen` with `requestForegroundPermissionsAsync`, `getCurrentPositionAsync`, and `MapView` with `Marker` |
-| 15 min | Part 5: Auth shell | Code-along: install `expo-local-authentication`, build `AuthContext` with `biometricLogin`, `LoginScreen`, `RegisterScreen`, `SettingsScreen`, `AuthStackNavigator`, and final `App.js` with `NavigationApp` pattern |
-| 20 min | Part 6: Persist login | Code-along: install `AsyncStorage`, add `AUTH_KEY`, `isLoading` state, `restoreSession` `useEffect`, async `login`/`logout`/`biometricLogin`; update `NavigationApp` with `ActivityIndicator` guard; Activity 2: conditionally show biometric button |
+| 10 min | Welcome and recap | Briefly revisit Lesson 2.17: React Navigation, nested navigators, `useFocusEffect`; set context for today's focus on native device features |
+| 35 min | Lecture: Native Device Capabilities | Slides: native modules and TurboModules, Expo vs. the manual native way, iOS vs. Android permission models, build-time vs. runtime permissions, overview of Explorer App |
+| 5 min | Break | |
+| 10 min | Setup | Code-along: create Expo project, install navigation dependencies, create shared style files, run the blank app via Expo Go |
+| 12 min | Lab Part 1: Tab navigation shell | Code-along: create stub screens, build `TabNavigator`, wire into `App.js` |
+| 12 min | Lab Part 2: Home screen with gallery picker | Code-along: install `expo-image-picker`, configure `app.json`, build `HomeScreen` with `launchImageLibraryAsync`, display selected image |
+| 35 min | Lab Part 3: Camera and QR scanning | Code-along: install `expo-camera` and `expo-media-library`, configure permissions, build `CameraScreen` with live preview, flip, `takePhoto`, and `onBarcodeScanned`; create `BarcodeResultScreen` and `AppStackNavigator`; Activity 1: fix repeated scan with `isScanned` and `useFocusEffect` |
+| 5 min | Break | |
+| 15 min | Lab Part 4: Location and map | Code-along: install `expo-location` and `react-native-maps`, configure `app.json`, build `LocationScreen` with `requestForegroundPermissionsAsync`, `getCurrentPositionAsync`, and `MapView` with `Marker` |
+| 25 min | Lab Part 5: Authenticated navigation shell | Code-along: install `expo-local-authentication`, build `AuthContext` with `biometricLogin`, `LoginScreen`, `RegisterScreen`, `SettingsScreen`, `AuthStackNavigator`, and final `App.js` with `NavigationApp` pattern |
+| 12 min | Lab Part 6: Persist login | Code-along: install `AsyncStorage`, add `AUTH_KEY`, `restoreSession` `useEffect`, async `login`/`logout`/`biometricLogin`; Activity 2 (optional, if time permits): conditionally show biometric button |
 | 15 min | Wrap up and Q&A | Recap objectives, review permission patterns, introduce `expo-secure-store` for production, preview Lesson 2.19 (coaching session) |
-| **Total** | | **~150 min** |
+| **Total** | | **~180 min** |
