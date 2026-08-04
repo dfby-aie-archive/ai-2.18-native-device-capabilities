@@ -14,7 +14,7 @@ By the end of this lesson, you will be able to:
 3. **Use** `expo-image-picker` to let users select media from the device library
 4. **Implement** location-based features using `expo-location` and display coordinates on a map with `react-native-maps`
 5. **Build** an authenticated navigation shell with `AuthContext`, conditional navigator rendering, and biometric login via `expo-local-authentication`
-6. **Persist** login state across app restarts using `AsyncStorage`
+6. **Persist** login state across app restarts using `AsyncStorage` (optional, if time permits)
 
 ---
 
@@ -1140,7 +1140,9 @@ By splitting `NavigationApp` out as a child of `<AuthProvider>`, it sits inside 
 
 ---
 
-## Part 6: Persisting Login State with `AsyncStorage` (12 min)
+## Part 6 (Optional, 12 min): Persisting Login State with `AsyncStorage`
+
+This part and Activity 2, which depends on it, are optional; skip both if you are short on time.
 
 Right now, every time the app restarts, the user must log in again. `AsyncStorage` is a simple key-value store that persists data to disk across app launches. You will use it to save a login flag so returning users go straight to the app.
 
@@ -1323,7 +1325,7 @@ Instead of fetching location once with `getCurrentPositionAsync`, use `Location.
 - Nesting a `TabNavigator` inside a `StackNavigator` is the standard pattern for screens that should be reachable from any tab but should not appear in the tab bar itself.
 - Conditional navigator rendering based on `AuthContext` is the idiomatic React Navigation pattern for auth flows: render the auth stack or the app stack, not individual hidden screens.
 - `expo-local-authentication` wraps Face ID, fingerprint, and device PIN behind a single `authenticateAsync` call. Always check `hasHardwareAsync` and `isEnrolledAsync` before attempting authentication.
-- `AsyncStorage` persists key-value data to disk across app launches. Reading it on mount inside a `useEffect` restores the session before the user sees the Login screen again. For sensitive data in production, use `expo-secure-store` instead.
+- (If covered) `AsyncStorage` persists key-value data to disk across app launches. Reading it on mount inside a `useEffect` restores the session before the user sees the Login screen again. For sensitive data in production, use `expo-secure-store` instead.
 
 ---
 

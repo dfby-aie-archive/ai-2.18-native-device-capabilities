@@ -17,7 +17,7 @@ This lesson teaches learners how to access native device hardware and OS feature
 - Use `expo-image-picker` to let users select media from the device library
 - Implement location-based features using `expo-location` and display coordinates on an interactive map with `react-native-maps`
 - Build an authenticated navigation shell with `AuthContext`, conditional navigator rendering, and biometric login via `expo-local-authentication`
-- Persist login state across app restarts using `AsyncStorage`
+- Persist login state across app restarts using `AsyncStorage` (optional, if time permits)
 
 ## Lesson Plan
 
@@ -33,6 +33,8 @@ This lesson teaches learners how to access native device hardware and OS feature
 | 5 min | Break | |
 | 15 min | Lab Part 4: Location and map | Code-along: install `expo-location` and `react-native-maps`, configure `app.json`, build `LocationScreen` with `requestForegroundPermissionsAsync`, `getCurrentPositionAsync`, and `MapView` with `Marker` |
 | 25 min | Lab Part 5: Authenticated navigation shell | Code-along: install `expo-local-authentication`, build `AuthContext` with `biometricLogin`, `LoginScreen`, `RegisterScreen`, `SettingsScreen`, `AuthStackNavigator`, and final `App.js` with `NavigationApp` pattern |
-| 12 min | Lab Part 6: Persist login | Code-along: install `AsyncStorage`, add `AUTH_KEY`, `restoreSession` `useEffect`, async `login`/`logout`/`biometricLogin`; Activity 2 (optional, if time permits): conditionally show biometric button |
+| 12 min | Lab Part 6 (Optional, if time permits): Persist login | Code-along: install `AsyncStorage`, add `AUTH_KEY`, `restoreSession` `useEffect`, async `login`/`logout`/`biometricLogin` |
+| 10 min | Activity 2 (Optional, depends on Part 6) | Conditionally show the biometric login button; only attempt if Part 6 was covered |
 | 15 min | Wrap up and Q&A | Recap objectives, review permission patterns, introduce `expo-secure-store` for production, preview Lesson 2.19 (coaching session) |
-| **Total** | | **~180 min** |
+| **Total (required)** | | **~179 min** |
+| Part 6 + Activity 2 (optional) | | **+22 min (~201 min with both)** |
