@@ -466,7 +466,44 @@ export default CameraScreen;
 
 On the Android emulator, the camera shows a simulated room scene. On the iOS Simulator, the camera is not available; use a physical device with Expo Go.
 
-### Step 3: Capture a photo and save it to the media library
+### Step 3: Unmount the camera when the screen is not focused
+
+Open the Camera tab so the viewfinder is showing, then switch to the Home tab. Switch back to Camera: the viewfinder is already there with no delay, as if it had been running the whole time. Check the device's camera indicator (the green dot on iOS, the camera icon in the status bar on Android) while sitting on the Home tab: it is still lit. The camera never actually stopped.
+
+<img src="./assets/images/camera-indicator.png" alt="Camera indicator on iOS" width="300" />
+
+React Navigation does not unmount tab screens when you switch tabs; it keeps them mounted in the background so that switching back is instant. That is fine for most screens, but not for `CameraView`: left mounted, it keeps the camera hardware active, keeps the indicator lit, and keeps draining battery while the user is looking at a completely different tab. `expo-camera` also expects only one active `CameraView` at a time, so a hidden one left running in the background is a source of crashes, not just wasted resources.
+
+Fix this with `useIsFocused` from `@react-navigation/native`. It returns `true` only while this screen is the active one and `false` the moment focus moves anywhere else, whether that is another tab or a new screen pushed on top of this one.
+
+Update the imports in `screens/CameraScreen.js`:
+
+```jsx
+// screens/CameraScreen.js
+import { useIsFocused } from "@react-navigation/native";
+```
+
+Call the hook inside `CameraScreen`, alongside the other hooks:
+
+```jsx
+// screens/CameraScreen.js
+const isFocused = useIsFocused();
+```
+
+Wrap `CameraView` so it only renders while the screen is focused:
+
+```jsx
+// screens/CameraScreen.js
+{isFocused && (
+  <CameraView facing={facing} style={styles.camera} ref={cameraRef} />
+)}
+```
+
+Unmounting the component while off-screen and mounting a fresh one on return is the fix: re-establishing the camera session on return is fast, so nothing is lost by not keeping it warm in the background.
+
+**Device check:** with the fix in place, switch to another tab while Camera is open, and check the camera indicator: it should turn off. Switch back to Camera: the viewfinder briefly disappears and reappears, and the indicator turns back on.
+
+### Step 4: Capture a photo and save it to the media library
 
 The camera permission and the media library permission are separate. A user can grant camera access but deny the right to save photos, so always check the media library permission before saving.
 
@@ -515,7 +552,7 @@ Add a "Take Photo" button alongside the flip button inside `buttonsContainer`:
 
 > **Common mistake:** calling `MediaLibrary.createAssetAsync` before requesting the media library permission. The call will silently fail or throw on both platforms. Always check the permission first, even if the camera permission has already been granted; they are independent, and on Android 13 and later the media library permission is no longer granted automatically.
 
-### Step 4: Add QR and barcode scanning
+### Step 5: Add QR and barcode scanning
 
 `CameraView` supports barcode scanning via the `onBarcodeScanned` prop. When a handler is passed, the camera scans continuously and calls the handler every time it detects a code, receiving `{ type, data }`.
 
@@ -627,16 +664,18 @@ const handleBarcodeScanned = ({ type, data }) => {
 };
 ```
 
-Update `CameraView` in the `return`:
+Update `CameraView` in the `return`, keeping the `isFocused` guard from Step 3:
 
 ```jsx
 // screens/CameraScreen.js
-<CameraView
-  facing={facing}
-  style={styles.camera}
-  ref={cameraRef}
-  onBarcodeScanned={handleBarcodeScanned}
-/>
+{isFocused && (
+  <CameraView
+    facing={facing}
+    style={styles.camera}
+    ref={cameraRef}
+    onBarcodeScanned={handleBarcodeScanned}
+  />
+)}
 ```
 
 **Device check:** point the camera at a QR code. The app navigates to `BarcodeResultScreen` showing the decoded data. Tapping "Go Back" returns to the Camera tab.
@@ -645,9 +684,9 @@ Update `CameraView` in the `return`:
 
 ## Activity 1: Fix the Repeated Scan Problem (10 min)
 
-`BarcodeResultScreen` is pushed onto the same stack as `CameraScreen`, so `CameraScreen` stays mounted underneath it rather than unmounting. Its `CameraView` keeps running and keeps calling `onBarcodeScanned` on every frame, even while `BarcodeResultScreen` is the screen the user actually sees. This wastes processing and battery for no benefit, since the app has already navigated away with the decoded data it needed.
+`onBarcodeScanned` does not fire once per physical scan; it fires once per camera frame that contains a recognisable code, typically many times a second. Pointing the camera at a single QR code for even a brief moment calls `handleBarcodeScanned` repeatedly, not once. `navigation.navigate` does not push a duplicate `BarcodeResultScreen` for each of those calls (calling it again with the same screen name just updates that screen's params instead of pushing a new one), but `handleBarcodeScanned` itself still runs every time, and any side effect inside it (haptics, a sound, an analytics event) would fire repeatedly too, right up until `useIsFocused` catches up and unmounts the camera on blur. Navigation focus changes are not instant, so there is a real, common window (not a rare edge case) where several redundant scans happen before that unmount takes effect.
 
-Your task: make `CameraScreen` stop scanning as soon as a code is detected, so it is not scanning in the background while `BarcodeResultScreen` is showing. Scanning should resume once the user returns to the Camera tab; if the same code is still in frame at that point, scanning it again and navigating again is expected behaviour, not a bug.
+Your task: make `CameraScreen` stop scanning as soon as a code is detected, so `handleBarcodeScanned` only runs once per visit, rather than once per frame the code stays in view. Scanning should resume once the user returns to the Camera tab; if the same code is still in frame at that point, scanning it again and navigating again is expected behaviour, not a bug.
 
 **Hints:**
 
@@ -662,12 +701,13 @@ Your task: make `CameraScreen` stop scanning as soon as a code is detected, so i
 ```jsx
 // screens/CameraScreen.js
 import { useCallback, useRef, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 
 function CameraScreen({ navigation }) {
   const [facing, setFacing] = useState("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [isScanned, setIsScanned] = useState(false);
+  const isFocused = useIsFocused();
   const cameraRef = useRef(null);
 
   useFocusEffect(
@@ -685,19 +725,60 @@ function CameraScreen({ navigation }) {
 
   return (
     <View style={commonStyles.container}>
-      <CameraView
-        facing={facing}
-        style={styles.camera}
-        ref={cameraRef}
-        onBarcodeScanned={isScanned ? undefined : handleBarcodeScanned}
-      />
+      {isFocused && (
+        <CameraView
+          facing={facing}
+          style={styles.camera}
+          ref={cameraRef}
+          onBarcodeScanned={isScanned ? undefined : handleBarcodeScanned}
+        />
+      )}
       {/* ... buttons ... */}
     </View>
   );
 }
 ```
 
+`isScanned` and `isFocused` are solving different problems even though both end up gating the same prop and JSX: `isFocused` unmounts the camera entirely once focus has actually moved away, which also covers the tab-switch case from earlier in this lesson; `isScanned` stops the scan callback the instant a code is detected, closing the shorter gap before that unmount takes effect.
+
 </details>
+
+---
+
+## Activity 2: Add Haptic Feedback on Scan (5 min)
+
+A live camera viewfinder gives no confirmation that a scan actually worked until `BarcodeResultScreen` appears a moment later. A short vibration the instant a code is detected gives the user immediate physical confirmation, before the screen transition even completes. This is a common pattern in scanning apps (think of a supermarket self-checkout scanner beeping on every item).
+
+`expo-haptics` provides this. It needs no `app.json` plugin and no runtime permission request; on Android the required `VIBRATE` permission is added automatically when the package is installed.
+
+Your task: trigger a success haptic the moment a barcode is detected, inside `handleBarcodeScanned`, before navigating to `BarcodeResultScreen`.
+
+**Hints:**
+
+1. Install the package: `npx expo install expo-haptics`.
+2. Import it with `import * as Haptics from "expo-haptics"`.
+3. `Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)` triggers a success-style vibration pattern. It returns a promise, but nothing in `handleBarcodeScanned` needs to wait for it to resolve.
+4. Call it as the first line inside `handleBarcodeScanned`, before `setIsScanned(true)` and `navigation.navigate`.
+
+<details>
+<summary>Reference solution</summary>
+
+```jsx
+// screens/CameraScreen.js
+import * as Haptics from "expo-haptics";
+
+const handleBarcodeScanned = ({ type, data }) => {
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  setIsScanned(true);
+  navigation.navigate("BarcodeResult", { barcodeData: data });
+};
+```
+
+Because `isScanned` from Activity 1 already stops `handleBarcodeScanned` from running more than once per visit, the haptic also fires only once per scan, not once per frame. Without that guard, the device would buzz repeatedly for a fraction of a second on every detection, which would feel broken rather than responsive.
+
+</details>
+
+**Device check:** point the camera at a QR code on a physical device (the emulator/simulator cannot simulate vibration). The device should vibrate once, immediately, right as the app navigates to `BarcodeResultScreen`.
 
 ---
 
@@ -1142,7 +1223,7 @@ By splitting `NavigationApp` out as a child of `<AuthProvider>`, it sits inside 
 
 ## Part 6 (Optional, 12 min): Persisting Login State with `AsyncStorage`
 
-This part and Activity 2, which depends on it, are optional; skip both if you are short on time.
+This part and Activity 3, which depends on it, are optional; skip both if you are short on time.
 
 Right now, every time the app restarts, the user must log in again. `AsyncStorage` is a simple key-value store that persists data to disk across app launches. You will use it to save a login flag so returning users go straight to the app.
 
@@ -1234,7 +1315,7 @@ export default AuthContext;
 
 ---
 
-## Activity 2 (Optional, 10 min): Conditionally Show the Biometric Login Button
+## Activity 3 (Optional, 10 min): Conditionally Show the Biometric Login Button
 
 This activity is optional; skip it if you are short on time.
 
@@ -1323,6 +1404,7 @@ Instead of fetching location once with `getCurrentPositionAsync`, use `Location.
 - Expo's `app.json` plugin system is the single place to declare native permissions for both iOS and Android. iOS additionally requires a usage description string for each permission.
 - `useCameraPermissions` is a hook that returns the current permission status and a function to request it. Use it for features that are needed immediately when the screen mounts. For features triggered by user action, like getting location, request permission imperatively inside the handler instead.
 - Nesting a `TabNavigator` inside a `StackNavigator` is the standard pattern for screens that should be reachable from any tab but should not appear in the tab bar itself.
+- React Navigation keeps tab screens mounted in the background when you switch tabs; it does not unmount them. For screens holding a live camera or other exclusive hardware resource, use `useIsFocused` to conditionally render that part of the screen so it unmounts when not focused.
 - Conditional navigator rendering based on `AuthContext` is the idiomatic React Navigation pattern for auth flows: render the auth stack or the app stack, not individual hidden screens.
 - `expo-local-authentication` wraps Face ID, fingerprint, and device PIN behind a single `authenticateAsync` call. Always check `hasHardwareAsync` and `isEnrolledAsync` before attempting authentication.
 - (If covered) `AsyncStorage` persists key-value data to disk across app launches. Reading it on mount inside a `useEffect` restores the session before the user sees the Login screen again. For sensitive data in production, use `expo-secure-store` instead.
@@ -1336,6 +1418,7 @@ Instead of fetching location once with `getCurrentPositionAsync`, use `Location.
 - [Expo Media Library docs](https://docs.expo.dev/versions/latest/sdk/media-library/)
 - [Expo Location docs](https://docs.expo.dev/versions/latest/sdk/location/)
 - [Expo Local Authentication docs](https://docs.expo.dev/versions/latest/sdk/local-authentication/)
+- [Expo Haptics docs](https://docs.expo.dev/versions/latest/sdk/haptics/)
 - [AsyncStorage docs](https://react-native-async-storage.github.io/async-storage/)
 - [Expo SecureStore docs](https://docs.expo.dev/versions/latest/sdk/securestore/)
 - [react-native-maps docs](https://github.com/react-native-maps/react-native-maps)
