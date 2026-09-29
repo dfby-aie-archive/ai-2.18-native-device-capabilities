@@ -23,7 +23,7 @@ Timebox **2–3 hours** across these resources before the lesson. You do not nee
 **Read (20 min)**
 
 - [Expo Camera docs](https://docs.expo.dev/versions/latest/sdk/camera/): Read the "Installation" section, the "Configuration in app.json" section, and the `CameraView` component reference. Note the `useCameraPermissions` hook, the `facing` prop, and `onBarcodeScanned`.
-- [Expo Media Library docs](https://docs.expo.dev/versions/latest/sdk/media-library/): Read the "Installation" section and the `requestPermissionsAsync` and `createAssetAsync` function signatures.
+- [Expo Media Library (legacy) docs](https://docs.expo.dev/versions/latest/sdk/media-library-legacy/): Read the `requestPermissionsAsync` and `saveToLibraryAsync` function signatures.
 
 **Key ideas to take away:**
 

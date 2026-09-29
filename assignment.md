@@ -34,7 +34,7 @@ Build a **Field Notes** app that lets users record observations in the field. Ea
 
 #### 1. Project Setup
 
-- [ ] Create a new Expo project: `npx create-expo-app --template blank FieldNotesApp`
+- [ ] Create a new Expo project: `npx create-expo-app@latest --template blank@sdk-57 FieldNotesApp`
 - [ ] Install navigation dependencies:
   ```bash
   npx expo install @react-navigation/native @react-navigation/bottom-tabs @react-navigation/native-stack react-native-screens react-native-safe-area-context @react-native-vector-icons/ionicons

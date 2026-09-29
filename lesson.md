@@ -37,8 +37,7 @@ In this lesson you will build **Explorer App**: a four-screen tabbed app with a 
 Create a fresh Expo app and install all navigation dependencies at once:
 
 ```bash
-# Remember to select Expo SDK 54 when prompted
-npx create-expo-app --template blank explorer-app
+npx create-expo-app@latest --template blank@sdk-57 explorer-app
 ```
 
 Open in VS Code:
@@ -511,7 +510,7 @@ Add the `takePhoto` function to `CameraScreen`, just above the `return`:
 
 ```jsx
 // screens/CameraScreen.js
-import * as MediaLibrary from "expo-media-library";
+import * as MediaLibrary from "expo-media-library/legacy";
 import { Alert } from "react-native";
 
 const takePhoto = async () => {
@@ -526,7 +525,7 @@ const takePhoto = async () => {
       return;
     }
     const photo = await cameraRef.current.takePictureAsync();
-    await MediaLibrary.createAssetAsync(photo.uri);
+    await MediaLibrary.saveToLibraryAsync(photo.uri);
     Alert.alert("Photo Taken", "Photo saved to media library.");
   } catch (error) {
     console.log("Error taking photo:", error);
@@ -550,7 +549,7 @@ Add a "Take Photo" button alongside the flip button inside `buttonsContainer`:
 
 **Device check:** tapping "Take Photo" saves a photo and shows the confirmation alert. Open the device photo library to verify the photo is there.
 
-> **Common mistake:** calling `MediaLibrary.createAssetAsync` before requesting the media library permission. The call will silently fail or throw on both platforms. Always check the permission first, even if the camera permission has already been granted; they are independent, and on Android 13 and later the media library permission is no longer granted automatically.
+> **Common mistake:** calling `MediaLibrary.saveToLibraryAsync` before requesting the media library permission. On Android the call will fail or throw; on iOS the system shows its own prompt instead, and the call throws if the user declines. Always check the permission first, even if the camera permission has already been granted; they are independent, and on Android 13 and later the media library permission is no longer granted automatically.
 
 ### Step 5: Add QR and barcode scanning
 
@@ -897,6 +896,8 @@ Two things to note:
 - `location?.coords &&` uses optional chaining to guard against rendering `MapView` before location has been set. Without the guard, accessing `location.coords` when `location` is `null` would throw.
 
 **Device check:** tapping "Get Location" shows the permission dialog. After granting, coordinates appear and a map renders centred on the current position with a "You are here" marker.
+
+> **Known issue on Android:** with Expo SDK 57, `react-native-maps` in Expo Go on Android currently renders the map as a black area: the Google logo appears and the map responds to pan and zoom gestures, but no map tiles load. This is a known Expo Go bug ([expo/expo#49323](https://github.com/expo/expo/issues/49323)), not a mistake in your code. If the coordinates appear, your location code is working. The map renders correctly in Expo Go on iOS.
 
 Emulators and simulators do not have real GPS hardware, so they report a default simulated location instead of where the computer actually is. The Android emulator defaults to Google's headquarters in Mountain View, California. The iOS Simulator defaults to Apple's flagship retail store in Union Square, San Francisco. Do not be surprised if the marker does not appear anywhere near you: this is expected. To change it, set a simulated location via Extended Controls > Location on the Android emulator, or Features > Location > Custom Location on the iOS Simulator.
 
@@ -1391,7 +1392,7 @@ Add a state variable `barcodeScanEnabled` (boolean, starts `true`) and a button 
 
 ### Challenge 4: Image preview before saving
 
-After `takePictureAsync`, store the photo URI in state and display a preview overlay on top of `CameraView`. Add "Save" and "Discard" buttons on the overlay. Only call `MediaLibrary.createAssetAsync` when the user taps "Save"; "Discard" clears the preview and returns to the live viewfinder.
+After `takePictureAsync`, store the photo URI in state and display a preview overlay on top of `CameraView`. Add "Save" and "Discard" buttons on the overlay. Only call `MediaLibrary.saveToLibraryAsync` when the user taps "Save"; "Discard" clears the preview and returns to the live viewfinder.
 
 ### Challenge 5: Live location tracking
 
